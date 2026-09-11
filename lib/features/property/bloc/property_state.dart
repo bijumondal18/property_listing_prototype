@@ -1,0 +1,47 @@
+part of 'property_bloc.dart';
+
+enum PropertyStatus { initial, loading, success, failure }
+
+final class PropertyState extends Equatable {
+  const PropertyState({
+    this.status = PropertyStatus.initial,
+    this.properties = const [],
+    this.filters = const PropertyFilters(),
+    this.selectedProperty,
+    this.errorMessage,
+  });
+
+  final PropertyStatus status;
+  final List<Property> properties;
+  final PropertyFilters filters;
+  final Property? selectedProperty;
+  final String? errorMessage;
+
+  bool get isLoading =>
+      status == PropertyStatus.loading || status == PropertyStatus.initial;
+  bool get isEmpty => status == PropertyStatus.success && properties.isEmpty;
+  bool get hasError => status == PropertyStatus.failure;
+
+  PropertyState copyWith({
+    PropertyStatus? status,
+    List<Property>? properties,
+    PropertyFilters? filters,
+    Property? selectedProperty,
+    String? errorMessage,
+    bool clearError = false,
+    bool clearSelected = false,
+  }) {
+    return PropertyState(
+      status: status ?? this.status,
+      properties: properties ?? this.properties,
+      filters: filters ?? this.filters,
+      selectedProperty:
+          clearSelected ? null : (selectedProperty ?? this.selectedProperty),
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    );
+  }
+
+  @override
+  List<Object?> get props =>
+      [status, properties, filters, selectedProperty, errorMessage];
+}
