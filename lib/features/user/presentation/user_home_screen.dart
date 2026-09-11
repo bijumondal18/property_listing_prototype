@@ -15,8 +15,10 @@ import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/pinned_header_delegate.dart';
 import '../../../shared/widgets/property_card.dart';
 import '../../../shared/widgets/property_search_bar.dart';
+import '../../../shared/widgets/logout_confirmation.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../property/bloc/property_bloc.dart';
+import '../bloc/favorites_bloc.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
@@ -67,6 +69,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
+  Future<void> _confirmLogout() async {
+    final confirmed = await showLogoutConfirmation(context);
+    if (!mounted || !confirmed) return;
+    context.read<AuthBloc>().add(const AuthLogoutRequested());
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -74,7 +82,19 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final user = context.watch<AuthBloc>().state.user;
     final greeting = Formatters.greeting();
 
-    return Scaffold(
+    return BlocListener<FavoritesBloc, FavoritesState>(
+      listenWhen: (previous, current) =>
+          current.lastMessage != null &&
+          current.lastMessage != previous.lastMessage,
+      listener: (context, state) {
+        final message = state.lastMessage;
+        if (message != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      },
+      child: Scaffold(
       body: BlocBuilder<PropertyBloc, PropertyState>(
         builder: (context, state) {
           return NestedScrollView(
@@ -150,11 +170,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                                 IconButton(
                                   tooltip: 'Logout',
                                   icon: const Icon(Icons.logout),
-                                  onPressed: () {
-                                    context
-                                        .read<AuthBloc>()
-                                        .add(const AuthLogoutRequested());
-                                  },
+                                  onPressed: _confirmLogout,
                                 ),
                               ],
                             ),
@@ -182,10 +198,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           );
         },
       ),
+    ),
     );
   }
 
   Widget _buildBody(PropertyState state) {
+    final userId = context.read<AuthBloc>().state.user?.id;
+    final favState = context.watch<FavoritesBloc>().state;
     if (state.isLoading) {
       return const CustomScrollView(
         slivers: [
@@ -257,6 +276,17 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 final property = state.properties[index];
                 return PropertyCard(
                   property: property,
+                  isFavorite: favState.isFavorite(property.id),
+                  onFavoriteToggle: userId == null
+                      ? null
+                      : () {
+                          context.read<FavoritesBloc>().add(
+                            FavoritesToggleRequested(
+                              userId: userId,
+                              propertyId: property.id,
+                            ),
+                          );
+                        },
                   onViewDetails: () {
                     context
                         .read<PropertyBloc>()

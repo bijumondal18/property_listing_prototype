@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -5,6 +7,7 @@ class PropertyImage extends StatelessWidget {
   const PropertyImage({
     super.key,
     required this.imageUrl,
+    this.localImagePath,
     this.height,
     this.width,
     this.borderRadius,
@@ -12,6 +15,7 @@ class PropertyImage extends StatelessWidget {
   });
 
   final String imageUrl;
+  final String? localImagePath;
   final double? height;
   final double? width;
   final BorderRadius? borderRadius;
@@ -20,25 +24,42 @@ class PropertyImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(12);
+    final localPath = localImagePath?.trim();
+
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
         height: height,
         width: width ?? double.infinity,
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          fit: fit,
-          placeholder: (context, url) => _Placeholder(
-            height: height,
-            isLoading: true,
-          ),
-          errorWidget: (context, url, error) => _Placeholder(
-            height: height,
-            isLoading: false,
-          ),
-        ),
+        child: localPath != null && localPath.isNotEmpty
+            ? Image.file(
+                File(localPath),
+                fit: fit,
+                errorBuilder: (context, error, stackTrace) {
+                  return _networkOrPlaceholder(context);
+                },
+              )
+            : _networkOrPlaceholder(context),
       ),
     );
+  }
+
+  Widget _networkOrPlaceholder(BuildContext context) {
+    if (imageUrl.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: fit,
+        placeholder: (context, url) => _Placeholder(
+          height: height,
+          isLoading: true,
+        ),
+        errorWidget: (context, url, error) => _Placeholder(
+          height: height,
+          isLoading: false,
+        ),
+      );
+    }
+    return _Placeholder(height: height, isLoading: false);
   }
 }
 

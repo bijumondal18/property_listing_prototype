@@ -10,16 +10,25 @@ class PropertyCard extends StatelessWidget {
     required this.property,
     required this.onViewDetails,
     this.interestCount,
+    this.isFavorite = false,
+    this.onFavoriteToggle,
+    this.onEdit,
+    this.onDelete,
   });
 
   final Property property;
   final VoidCallback onViewDetails;
   final int? interestCount;
+  final bool isFavorite;
+  final VoidCallback? onFavoriteToggle;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isOwnerCard = onEdit != null || onDelete != null;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -32,6 +41,7 @@ class PropertyCard extends StatelessWidget {
               children: [
                 PropertyImage(
                   imageUrl: property.imageUrl,
+                  localImagePath: property.localImagePath,
                   height: 160,
                   borderRadius: BorderRadius.zero,
                 ),
@@ -40,7 +50,28 @@ class PropertyCard extends StatelessWidget {
                   left: 12,
                   child: _StatusChip(status: property.status),
                 ),
-                if (interestCount != null)
+                if (onFavoriteToggle != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: isFavorite
+                            ? 'Remove from saved'
+                            : 'Save property',
+                        onPressed: onFavoriteToggle,
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite
+                              ? const Color(0xFFC62828)
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (interestCount != null && onFavoriteToggle == null)
                   Positioned(
                     top: 12,
                     right: 12,
@@ -71,6 +102,29 @@ class PropertyCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                if (isOwnerCard && interestCount != null)
+                  Positioned(
+                    top: 12,
+                    right: 52,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$interestCount interests',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -148,13 +202,46 @@ class PropertyCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: onViewDetails,
-                      child: const Text('View Details'),
+                  if (isOwnerCard)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onViewDetails,
+                            child: const Text('View'),
+                          ),
+                        ),
+                        if (onEdit != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: onEdit,
+                              child: const Text('Edit'),
+                            ),
+                          ),
+                        ],
+                        if (onDelete != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colorScheme.error,
+                              ),
+                              onPressed: onDelete,
+                              child: const Text('Delete'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    )
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: onViewDetails,
+                        child: const Text('View Details'),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

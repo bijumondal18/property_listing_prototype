@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/dashboard_stat_card.dart';
@@ -7,8 +8,10 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/interest_card.dart';
 import '../../../shared/widgets/loading_view.dart';
+import '../../../shared/widgets/logout_confirmation.dart';
 import '../../../shared/widgets/property_card.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../property/bloc/property_bloc.dart';
 import '../bloc/owner_dashboard_bloc.dart';
 
 class OwnerHomeScreen extends StatefulWidget {
@@ -53,7 +56,9 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
     await Future<void>.delayed(const Duration(milliseconds: 600));
   }
 
-  void _logout() {
+  Future<void> _confirmLogout() async {
+    final confirmed = await showLogoutConfirmation(context);
+    if (!mounted || !confirmed) return;
     context.read<AuthBloc>().add(const AuthLogoutRequested());
   }
 
@@ -63,7 +68,20 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
     final colorScheme = theme.colorScheme;
     final user = context.watch<AuthBloc>().state.user;
 
-    return Scaffold(
+    return BlocListener<PropertyBloc, PropertyState>(
+      listenWhen: (previous, current) =>
+          current.mutationMessage != null &&
+          current.mutationMessage != previous.mutationMessage,
+      listener: (context, state) {
+        final message = state.mutationMessage;
+        if (message != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+          context.read<PropertyBloc>().add(const PropertyMutationStatusCleared());
+        }
+      },
+      child: Scaffold(
       body: BlocBuilder<OwnerDashboardBloc, OwnerDashboardState>(
         builder: (context, state) {
           if (state.isLoading) {
@@ -74,7 +92,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
                   IconButton(
                     tooltip: 'Logout',
                     icon: const Icon(Icons.logout),
-                    onPressed: _logout,
+                    onPressed: _confirmLogout,
                   ),
                 ],
               ),
@@ -90,7 +108,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
                   IconButton(
                     tooltip: 'Logout',
                     icon: const Icon(Icons.logout),
-                    onPressed: _logout,
+                    onPressed: _confirmLogout,
                   ),
                 ],
               ),
@@ -108,7 +126,23 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
             );
           }
 
-          return NestedScrollView(
+          return Scaffold(
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await context.push<bool>('/owner/property/add');
+                if (result == true && context.mounted) {
+                  final ownerId = context.read<AuthBloc>().state.user?.id;
+                  if (ownerId != null) {
+                    context.read<OwnerDashboardBloc>().add(
+                      OwnerDashboardLoadRequested(ownerId),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.add_home_work),
+              label: const Text('Add Property'),
+            ),
+            body: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverOverlapAbsorber(
@@ -187,7 +221,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
                                     IconButton(
                                       tooltip: 'Logout',
                                       icon: const Icon(Icons.logout),
-                                      onPressed: _logout,
+                                      onPressed: _confirmLogout,
                                     ),
                                   ],
                                 ),
@@ -229,9 +263,11 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen>
                 _InterestsTab(state: state, onRefresh: _refresh),
               ],
             ),
+          ),
           );
         },
       ),
+    ),
     );
   }
 }
@@ -255,12 +291,23 @@ class _PropertiesTab extends StatelessWidget {
                   context,
                 ),
               ),
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
                   title: 'No properties yet',
                   message: 'Your listed properties will appear here.',
                   icon: Icons.home_work_outlined,
+                  action: FilledButton.icon(
+                    onPressed: () async {
+                      final result =
+                          await context.push<bool>('/owner/property/add');
+                      if (result == true && context.mounted) {
+                        await onRefresh();
+                      }
+                    },
+                    icon: const Icon(Icons.add_home_work),
+                    label: const Text('Add Property'),
+                  ),
                 ),
               ),
             ],
@@ -287,6 +334,61 @@ class _PropertiesTab extends StatelessWidget {
                     return PropertyCard(
                       property: property,
                       interestCount: state.interestCounts[property.id] ?? 0,
+                      onEdit: () async {
+                        final result = await context.push<bool>(
+                          '/owner/property/edit/${property.id}',
+                        );
+                        if (result == true && context.mounted) {
+                          await onRefresh();
+                        }
+                      },
+                      onDelete: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) {
+                            return AlertDialog(
+                              title: const Text('Delete Property?'),
+                              content: Text(
+                                'Are you sure you want to delete "${property.name}"? '
+                                'This cannot be undone.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.error,
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                        if (confirmed == true && context.mounted) {
+                          final ownerId =
+                              context.read<AuthBloc>().state.user?.id;
+                          if (ownerId == null) return;
+                          context.read<PropertyBloc>().add(
+                            PropertyDeleteRequested(
+                              propertyId: property.id,
+                              requesterOwnerId: ownerId,
+                            ),
+                          );
+                          await Future<void>.delayed(
+                            const Duration(milliseconds: 800),
+                          );
+                          if (context.mounted) {
+                            await onRefresh();
+                          }
+                        }
+                      },
                       onViewDetails: () {
                         showModalBottomSheet<void>(
                           context: context,

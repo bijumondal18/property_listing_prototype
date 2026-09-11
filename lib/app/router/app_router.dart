@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/app_user.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/owner/presentation/owner_home_screen.dart';
+import '../../features/owner/presentation/property_form_screen.dart';
 import '../../features/property/presentation/interest_form_screen.dart';
 import '../../features/property/presentation/property_details_screen.dart';
 import '../../features/user/presentation/user_home_screen.dart';
@@ -24,21 +26,20 @@ class AppRouter {
     refreshListenable: _refreshListenable,
     redirect: (context, state) {
       final authState = _authBloc.state;
-      final loggingIn = state.matchedLocation == '/login';
+      final loc = state.matchedLocation;
+      final onAuthScreen = loc == '/login' || loc == '/signup';
       final isAuthenticated = authState.isAuthenticated;
       final user = authState.user;
 
       if (!isAuthenticated) {
-        return loggingIn ? null : '/login';
+        return onAuthScreen ? null : '/login';
       }
 
-      if (loggingIn) {
+      if (onAuthScreen) {
         return user!.role == UserRole.propertyOwner
             ? '/owner/home'
             : '/user/home';
       }
-
-      final loc = state.matchedLocation;
 
       if (user!.role == UserRole.user && loc.startsWith('/owner')) {
         return '/user/home';
@@ -58,12 +59,27 @@ class AppRouter {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: '/signup',
+        builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
         path: '/user/home',
         builder: (context, state) => const UserHomeScreen(),
       ),
       GoRoute(
         path: '/owner/home',
         builder: (context, state) => const OwnerHomeScreen(),
+      ),
+      GoRoute(
+        path: '/owner/property/add',
+        builder: (context, state) => const PropertyFormScreen(),
+      ),
+      GoRoute(
+        path: '/owner/property/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PropertyFormScreen(propertyId: id);
+        },
       ),
       GoRoute(
         path: '/property/:id',
@@ -89,8 +105,6 @@ class AppRouter {
   }
 }
 
-/// Notifies GoRouter only when authentication boundary changes,
-/// deferred to the next frame to avoid hit-testing a Scaffold mid-rebuild.
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<AuthState> stream) {
     _wasAuthenticated = false;
@@ -99,7 +113,6 @@ class GoRouterRefreshStream extends ChangeNotifier {
       if (authenticated == _wasAuthenticated) return;
       _wasAuthenticated = authenticated;
 
-      // Defer route refresh until after the current pointer/layout frame.
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_disposed) notifyListeners();
       });

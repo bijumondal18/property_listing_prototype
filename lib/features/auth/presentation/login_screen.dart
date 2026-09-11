@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/validators/validators.dart';
@@ -38,12 +39,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final role = context.read<AuthBloc>().state.selectedRole;
     context.read<AuthBloc>().add(
-          AuthLoginRequested(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            role: role,
-          ),
-        );
+      AuthLoginRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        role: role,
+      ),
+    );
   }
 
   @override
@@ -84,31 +85,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 12),
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Icon(
-                            Icons.apartment_rounded,
-                            size: 40,
-                            color: colorScheme.primary,
-                          ),
+                        Icon(
+                          Icons.apartment_rounded,
+                          size: 40,
+                          color: colorScheme.primary,
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          AppConstants.appName,
+                          "Welcome back!",
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 6),
                         Text(
-                          AppConstants.appTagline,
+                          "Please login to continue",
                           style: theme.textTheme.bodyLarge?.copyWith(
                             color: Colors.grey.shade600,
                           ),
@@ -178,9 +169,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onSelectionChanged: state.isLoading
                               ? null
                               : (roles) {
-                                  context
-                                      .read<AuthBloc>()
-                                      .add(AuthRoleSelected(roles.first));
+                                  context.read<AuthBloc>().add(
+                                    AuthRoleSelected(roles.first),
+                                  );
                                 },
                         ),
                         const SizedBox(height: 28),
@@ -189,7 +180,26 @@ class _LoginScreenState extends State<LoginScreen> {
                           isLoading: state.isLoading,
                           onPressed: _submit,
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account?",
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: state.isLoading
+                                  ? null
+                                  : () => context.push('/signup'),
+                              child: const Text('Sign Up'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         _DemoCredentialsCard(
                           onSelectUser: () => _fillCredentials(
                             DemoCredentials.userEmail,

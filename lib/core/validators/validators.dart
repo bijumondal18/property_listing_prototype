@@ -27,6 +27,19 @@ class Validators {
     return null;
   }
 
+  static String? signupPassword(String? value) {
+    return password(value, minLength: 8);
+  }
+
+  static String? confirmPassword(String? value, String password) {
+    final requiredError = required(value, fieldName: 'Confirm password');
+    if (requiredError != null) return requiredError;
+    if (value != password) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
   static String? phone(String? value) {
     final requiredError = required(value, fieldName: 'Mobile number');
     if (requiredError != null) return requiredError;
@@ -36,7 +49,6 @@ class Validators {
       return 'Mobile number must be numeric';
     }
 
-    // Indian mobile: 10 digits, optionally with country code 91
     String digits = cleaned;
     if (digits.startsWith('91') && digits.length == 12) {
       digits = digits.substring(2);
@@ -55,6 +67,53 @@ class Validators {
     if (requiredError != null) return requiredError;
     if (value!.trim().length < 2) {
       return 'Name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  static String? propertyName(String? value) {
+    final requiredError = required(value, fieldName: 'Property name');
+    if (requiredError != null) return requiredError;
+    if (value!.trim().length < 3) {
+      return 'Property name must be at least 3 characters';
+    }
+    return null;
+  }
+
+  static String? location(String? value) {
+    final requiredError = required(value, fieldName: 'Location');
+    if (requiredError != null) return requiredError;
+    if (value!.trim().length < 2) {
+      return 'Location must be at least 2 characters';
+    }
+    return null;
+  }
+
+  static String? positiveNumber(String? value, {String fieldName = 'Value'}) {
+    final requiredError = required(value, fieldName: fieldName);
+    if (requiredError != null) return requiredError;
+    final parsed = double.tryParse(value!.trim());
+    if (parsed == null) {
+      return '$fieldName must be numeric';
+    }
+    if (parsed <= 0) {
+      return '$fieldName must be greater than 0';
+    }
+    return null;
+  }
+
+  static String? description(String? value) {
+    final requiredError = required(value, fieldName: 'Description');
+    if (requiredError != null) return requiredError;
+    if (value!.trim().length < 20) {
+      return 'Description must be at least 20 characters';
+    }
+    return null;
+  }
+
+  static String? dropdownRequired(String? value, {String fieldName = 'Field'}) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
     }
     return null;
   }

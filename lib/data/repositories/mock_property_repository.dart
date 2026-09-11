@@ -11,6 +11,7 @@ class MockPropertyRepository implements PropertyRepository {
         );
 
   final List<Property> _properties;
+  int _idCounter = 1000;
 
   /// Exposed for unit tests.
   List<Property> get allProperties => List.unmodifiable(_properties);
@@ -35,6 +36,49 @@ class MockPropertyRepository implements PropertyRepository {
   Future<List<Property>> getPropertiesByOwner(String ownerId) async {
     await Future<void>.delayed(AppConstants.mockDelay);
     return _properties.where((p) => p.ownerId == ownerId).toList();
+  }
+
+  @override
+  Future<Property> addProperty(Property property) async {
+    await Future<void>.delayed(AppConstants.mockDelay);
+    final saved = property.copyWith(
+      id: property.id.isNotEmpty ? property.id : 'property_${_idCounter++}',
+    );
+    _properties.insert(0, saved);
+    return saved;
+  }
+
+  @override
+  Future<Property> updateProperty({
+    required Property property,
+    required String requesterOwnerId,
+  }) async {
+    await Future<void>.delayed(AppConstants.mockDelay);
+    final index = _properties.indexWhere((p) => p.id == property.id);
+    if (index < 0) {
+      throw PropertyException('Property not found.');
+    }
+    if (_properties[index].ownerId != requesterOwnerId) {
+      throw PropertyException('Unauthorized action');
+    }
+    _properties[index] = property;
+    return property;
+  }
+
+  @override
+  Future<void> deleteProperty({
+    required String propertyId,
+    required String requesterOwnerId,
+  }) async {
+    await Future<void>.delayed(AppConstants.mockDelay);
+    final index = _properties.indexWhere((p) => p.id == propertyId);
+    if (index < 0) {
+      throw PropertyException('Property not found.');
+    }
+    if (_properties[index].ownerId != requesterOwnerId) {
+      throw PropertyException('Unauthorized action');
+    }
+    _properties.removeAt(index);
   }
 
   /// Pure filtering logic — used by repository and unit tests.
@@ -108,4 +152,12 @@ class MockPropertyRepository implements PropertyRepository {
     }
     return sorted;
   }
+}
+
+class PropertyException implements Exception {
+  PropertyException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
 }

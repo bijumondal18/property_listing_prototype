@@ -50,3 +50,42 @@ final class PropertySelected extends PropertyEvent {
   @override
   List<Object?> get props => [property];
 }
+
+final class PropertyAddRequested extends PropertyEvent {
+  const PropertyAddRequested(this.property);
+
+  final Property property;
+
+  @override
+  List<Object?> get props => [property];
+}
+
+final class PropertyUpdateRequested extends PropertyEvent {
+  const PropertyUpdateRequested({
+    required this.property,
+    required this.requesterOwnerId,
+  });
+
+  final Property property;
+  final String requesterOwnerId;
+
+  @override
+  List<Object?> get props => [property, requesterOwnerId];
+}
+
+final class PropertyDeleteRequested extends PropertyEvent {
+  const PropertyDeleteRequested({
+    required this.propertyId,
+    required this.requesterOwnerId,
+  });
+
+  final String propertyId;
+  final String requesterOwnerId;
+
+  @override
+  List<Object?> get props => [propertyId, requesterOwnerId];
+}
+
+final class PropertyMutationStatusCleared extends PropertyEvent {
+  const PropertyMutationStatusCleared();
+}

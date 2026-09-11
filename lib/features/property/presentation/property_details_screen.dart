@@ -3,12 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../../../data/models/app_user.dart';
 import '../../../data/models/property.dart';
 import '../../../data/repositories/property_repository.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/property_image.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../user/bloc/favorites_bloc.dart';
 
 class PropertyDetailsScreen extends StatefulWidget {
   const PropertyDetailsScreen({super.key, required this.propertyId});
@@ -63,10 +66,38 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final user = context.watch<AuthBloc>().state.user;
+    final isUser = user?.role == UserRole.user;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Property Details'),
+        actions: [
+          if (isUser && _property != null)
+            BlocBuilder<FavoritesBloc, FavoritesState>(
+              builder: (context, favState) {
+                final userId = user!.id;
+                final isFavorite = favState.isFavorite(_property!.id);
+                return IconButton(
+                  tooltip: isFavorite
+                      ? 'Remove from saved'
+                      : 'Save property',
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: isFavorite ? const Color(0xFFC62828) : null,
+                  ),
+                  onPressed: () {
+                    context.read<FavoritesBloc>().add(
+                      FavoritesToggleRequested(
+                        userId: userId,
+                        propertyId: _property!.id,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+        ],
       ),
       body: _loading
           ? const LoadingView(message: 'Loading property...')
@@ -98,6 +129,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
         children: [
           PropertyImage(
             imageUrl: property.imageUrl,
+            localImagePath: property.localImagePath,
             height: 260,
             borderRadius: BorderRadius.zero,
           ),

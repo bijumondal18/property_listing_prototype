@@ -15,6 +15,7 @@ class Property extends Equatable {
     required this.imageUrl,
     required this.ownerId,
     required this.ownerName,
+    this.localImagePath,
   });
 
   final String id;
@@ -31,7 +32,13 @@ class Property extends Equatable {
   final String ownerId;
   final String ownerName;
 
+  /// Local file path from camera/gallery. Falls back to [imageUrl] when null/invalid.
+  final String? localImagePath;
+
   String get configuration => '$bedrooms BHK';
+
+  bool get hasLocalImage =>
+      localImagePath != null && localImagePath!.trim().isNotEmpty;
 
   Property copyWith({
     String? id,
@@ -47,6 +54,8 @@ class Property extends Equatable {
     String? imageUrl,
     String? ownerId,
     String? ownerName,
+    String? localImagePath,
+    bool clearLocalImage = false,
   }) {
     return Property(
       id: id ?? this.id,
@@ -62,6 +71,8 @@ class Property extends Equatable {
       imageUrl: imageUrl ?? this.imageUrl,
       ownerId: ownerId ?? this.ownerId,
       ownerName: ownerName ?? this.ownerName,
+      localImagePath:
+          clearLocalImage ? null : (localImagePath ?? this.localImagePath),
     );
   }
 
@@ -80,5 +91,6 @@ class Property extends Equatable {
         imageUrl,
         ownerId,
         ownerName,
+        localImagePath,
       ];
 }

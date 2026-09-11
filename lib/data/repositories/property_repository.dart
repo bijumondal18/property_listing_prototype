@@ -7,4 +7,16 @@ abstract class PropertyRepository {
   Future<Property?> getPropertyById(String id);
 
   Future<List<Property>> getPropertiesByOwner(String ownerId);
+
+  Future<Property> addProperty(Property property);
+
+  Future<Property> updateProperty({
+    required Property property,
+    required String requesterOwnerId,
+  });
+
+  Future<void> deleteProperty({
+    required String propertyId,
+    required String requesterOwnerId,
+  });
 }
